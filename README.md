@@ -39,7 +39,7 @@ end
 As of now, this function does not support any options, so let's provide that.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Repo.all(Post)
 end
 ```
@@ -47,7 +47,7 @@ end
 Now, let's support the desired API in one go with a few functions.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
   |> Repo.all()
@@ -76,7 +76,7 @@ Were we to have wanted to default to _published_ posts, we can add defaults
 to the `maybe/5` function call.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2], filter: :published)
   |> Repo.all()
@@ -105,7 +105,7 @@ name of, say, `:include`. Again, this could be any name that makes sense for
 our application.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> TokenOperator.maybe(opts, :include, author: &join_author/2)
   |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2])
@@ -187,7 +187,7 @@ instance, ordering. The simplest way to handle this is probably using a single
 function.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> TokenOperator.maybe(opts, :include, author: &join_author/2)
   |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
@@ -217,7 +217,7 @@ name) rather than an attribute/column directly on `Post`?
 Thus, we might consider handling ordering in the same way as `:include` and `:filter`.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> TokenOperator.maybe(opts, :include, author: &join_author/2)
   |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
@@ -248,19 +248,19 @@ to wrap these calls in a consistent API that our app owns.
 defmodule MyApp.Utilities.MaybeQueries do
   alias MyApp.Repo
 
-  def maybe_filter(query, opts, functions, defaults \\\\ []) do
+  def maybe_filter(query, opts, functions, defaults \\ []) do
     TokenOperator.maybe(query, opts, :filter, functions, defaults)
   end
 
-  def maybe_include(query, opts, functions, defaults \\\\ []) do
+  def maybe_include(query, opts, functions, defaults \\ []) do
     TokenOperator.maybe(query, opts, :include, functions, defaults)
   end
 
-  def maybe_order_by(query, opts, functions, defaults \\\\ []) do
+  def maybe_order_by(query, opts, functions, defaults \\ []) do
     TokenOperator.maybe(query, opts, :order_by, functions, defaults)
   end
 
-  def maybe_paginate(query, opts, defaults \\\\ [paginate: false, page: 1, page_size: 20]) do
+  def maybe_paginate(query, opts, defaults \\ [paginate: false, page: 1, page_size: 20]) do
     TokenOperator.maybe(query, opts, :paginate, &paginate/2, defaults)
   end
 
@@ -279,7 +279,7 @@ Now our `list_posts` function becomes even simpler.
 ```elixir
 import MyApp.Utilities.MaybeQueries
 
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> maybe_include(opts, author: &join_author/2)
   |> maybe_filter(opts, published: &published/2, featured: &featured/2)
@@ -299,7 +299,7 @@ perhaps we want to be able to grab all posts by a given author. We could expose
 an `:author` option.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> TokenOperator.maybe(opts, :author, &by_author/2)
   |> maybe_include(opts, author: &join_author/2)
@@ -345,7 +345,7 @@ that can be shared. We'll leave `maybe_paginate` off since it is a terminating
 function, which makes it slightly less flexible.
 
 ```elixir
-defp maybe_queries(query, opts \\\\ []) do
+defp maybe_queries(query, opts \\ []) do
   query
   |> maybe_include(opts, author: &join_author/2)
   |> maybe_filter(opts, published: &published/2, featured: &featured/2)
@@ -356,13 +356,13 @@ end
 We can use this shared function in both our collection functions.
 
 ```elixir
-def list_posts(opts \\\\ []) do
+def list_posts(opts \\ []) do
   Post
   |> maybe_queries(opts)
   |> maybe_paginate(opts)
 end
 
-def list_posts_by(%User{} = author, opts \\\\ []) do
+def list_posts_by(%User{} = author, opts \\ []) do
   from(p in Post, where: p.author_id == ^author.id)
   |> maybe_queries(opts)
   |> maybe_paginate(opts)
@@ -378,7 +378,7 @@ are not relevant, but they don't hurt anything. Thus, we can use our same
 shared `maybe_query/2` function here.
 
 ```elixir
-def get_post!(opts \\\\ []) do
+def get_post!(opts \\ []) do
   Post
   |> maybe_queries(opts)
   |> Repo.get!()
