@@ -18,7 +18,9 @@ featured, etc. We could create a bunch of functions such as `list_published_post
 There are endless ways to provide an API to this context, but one might be
 something like...
 
-    Posts.list_posts(filter: [:published, :featured])
+```elixir
+Posts.list_posts(filter: [:published, :featured])
+```
 
 Essentially, a `filter` keyword that can take zero or more of `:published` and
 `:featured`. When `:filter` is missing, all posts should be returned.
@@ -28,31 +30,37 @@ when doing it often.
 
 In our context, we probably have a function that looks something like...
 
-    def list_posts do
-      Repo.all(Post)
-    end
+```elixir
+def list_posts do
+  Repo.all(Post)
+end
+```
 
 As of now, this function does not support any options, so let's provide that.
 
-    def list_posts(opts \\\\ []) do
-      Repo.all(Post)
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Repo.all(Post)
+end
+```
 
 Now, let's support the desired API in one go with a few functions.
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
-      |> Repo.all()
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Post
+  |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
+  |> Repo.all()
+end
 
-    defp published(query, _opts) do
-      from(p in query, where: p.is_published)
-    end
+defp published(query, _opts) do
+  from(p in query, where: p.is_published)
+end
 
-    defp featured(query, _opts) do
-      from(p in query, where: p.is_featured)
-    end
+defp featured(query, _opts) do
+  from(p in query, where: p.is_featured)
+end
+```
 
 Piping the query through the `TokenOperator.maybe/5` function sets us up with
 the desired API. The following is now supported:
@@ -67,11 +75,13 @@ the desired API. The following is now supported:
 Were we to have wanted to default to _published_ posts, we can add defaults
 to the `maybe/5` function call.
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2], filter: :published)
-      |> Repo.all()
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Post
+  |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2], filter: :published)
+  |> Repo.all()
+end
+```
 
 The `maybe/5` function takes the following arguments:
 
@@ -94,16 +104,18 @@ sometimes not. Just chain another `maybe/5` function call using a keyword
 name of, say, `:include`. Again, this could be any name that makes sense for
 our application.
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-      |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2])
-      |> Repo.all()
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Post
+  |> TokenOperator.maybe(opts, :include, author: &join_author/2)
+  |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2])
+  |> Repo.all()
+end
 
-    defp join_author(query, _opts) do
-      from(p in query, left_join: a in assoc(p, :author), preload: [author: a])
-    end
+defp join_author(query, _opts) do
+  from(p in query, left_join: a in assoc(p, :author), preload: [author: a])
+end
+```
 
 Now we can request authors be included with `Posts.list_posts(include: :author)`.
 This pattern can be used whether joining, preloading, grabbing deeply
@@ -120,27 +132,31 @@ want to pass the value of a keyword directly to a single function.
 Suppose we want to conditionally paginate based upon values passed as keyword
 options in the controller. We want to support the following API:
 
-    Posts.list_posts(paginate: true, page: 3, page_size: 10)
+```elixir
+Posts.list_posts(paginate: true, page: 3, page_size: 10)
+```
 
 Let's support pagination with a default page and page size. By default, pagination
 will be disabled.
 
-    def list_posts(opts // []) do
-      Post
-      |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-      |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
-      |> TokenOperator.maybe(opts, :paginate, &maybe_paginate/2, page: 1, page_size: 20)
-    end
+```elixir
+def list_posts(opts // []) do
+  Post
+  |> TokenOperator.maybe(opts, :include, author: &join_author/2)
+  |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
+  |> TokenOperator.maybe(opts, :paginate, &maybe_paginate/2, page: 1, page_size: 20)
+end
 
-    defp maybe_paginate(query, %{paginate: true, page: page, page_size: page_size}) do
-      # Repo.paginate is an example function call to our pagination library,
-      # such as Scrivener.
-      Repo.paginate(query, page: page, page_size: page_size)
-    end
+defp maybe_paginate(query, %{paginate: true, page: page, page_size: page_size}) do
+  # Repo.paginate is an example function call to our pagination library,
+  # such as Scrivener.
+  Repo.paginate(query, page: page, page_size: page_size)
+end
 
-    defp maybe_paginate(query, _opts) do
-      Repo.all(query)
-    end
+defp maybe_paginate(query, _opts) do
+  Repo.all(query)
+end
+```
 
 Rather than providing a keyword list of functions, there is only a single `paginate/2`
 function. This provides the following ways to call the function:
@@ -170,24 +186,28 @@ best by calling a single function. It might not always be that clear. Take for
 instance, ordering. The simplest way to handle this is probably using a single
 function.
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-      |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
-      |> TokenOperator.maybe(opts, :order_by, &maybe_order/2, order_by: [desc: :published_on])
-      |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Post
+  |> TokenOperator.maybe(opts, :include, author: &join_author/2)
+  |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
+  |> TokenOperator.maybe(opts, :order_by, &maybe_order/2, order_by: [desc: :published_on])
+  |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
+end
 
-    defp maybe_order_by(query, %{order_by: order_by}) do
-      from(query, order_by: ^order_by)
-    end
+defp maybe_order_by(query, %{order_by: order_by}) do
+  from(query, order_by: ^order_by)
+end
+```
 
 The nice thing about this is that we can now pass anything that the `Ecto.Query`
 `:order_by` option supports. All of the following would work out-of-the-box:
 
-    Post.list_posts(order_by: [asc: :title])
-    Post.list_posts(order_by: [desc: :published_on])
-    Post.list_posts(order_by: [desc: :published_on, asc: :title])
+```elixir
+Post.list_posts(order_by: [asc: :title])
+Post.list_posts(order_by: [desc: :published_on])
+Post.list_posts(order_by: [desc: :published_on, asc: :title])
+```
 
 The downside is that we are ever-so-slightly coupling our `order_by` option
 to Ecto and we are less explicit about what ordering is supported via our
@@ -196,22 +216,23 @@ name) rather than an attribute/column directly on `Post`?
 
 Thus, we might consider handling ordering in the same way as `:include` and `:filter`.
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-      |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
-      |> TokenOperator.maybe(opts, :order_by, [publish_date: &order_by_publish_date/2, title: &order_by_title/2], order_by: :publish_date)
-      |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Post
+  |> TokenOperator.maybe(opts, :include, author: &join_author/2)
+  |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
+  |> TokenOperator.maybe(opts, :order_by, [publish_date: &order_by_publish_date/2, title: &order_by_title/2], order_by: :publish_date)
+  |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
+end
 
-    defp order_by_publish_date(query, _opts) do
-      from query, order_by: [desc: :published_on]
-    end
+defp order_by_publish_date(query, _opts) do
+  from query, order_by: [desc: :published_on]
+end
 
-    defp order_by_title(query, _opts) do
-      from query, order_by: :title
-    end
-
+defp order_by_title(query, _opts) do
+  from query, order_by: :title
+end
+```
 
 This is more work, but more explicit and less dependent upon Ecto. Which method
 is best is going to depend upon our use case.
@@ -223,45 +244,49 @@ the language of our API will start to become clear. If we are always using
 keyword options like `:include`, `:filter`, `:order_by`, and `:paginate`, it is quite easy
 to wrap these calls in a consistent API that our app owns.
 
-    defmodule MyApp.Utilities.MaybeQueries do
-      alias MyApp.Repo
+```elixir
+defmodule MyApp.Utilities.MaybeQueries do
+  alias MyApp.Repo
 
-      def maybe_filter(query, opts, functions, defaults \\\\ []) do
-        TokenOperator.maybe(query, opts, :filter, functions, defaults)
-      end
+  def maybe_filter(query, opts, functions, defaults \\\\ []) do
+    TokenOperator.maybe(query, opts, :filter, functions, defaults)
+  end
 
-      def maybe_include(query, opts, functions, defaults \\\\ []) do
-        TokenOperator.maybe(query, opts, :include, functions, defaults)
-      end
+  def maybe_include(query, opts, functions, defaults \\\\ []) do
+    TokenOperator.maybe(query, opts, :include, functions, defaults)
+  end
 
-      def maybe_order_by(query, opts, functions, defaults \\\\ []) do
-        TokenOperator.maybe(query, opts, :order_by, functions, defaults)
-      end
+  def maybe_order_by(query, opts, functions, defaults \\\\ []) do
+    TokenOperator.maybe(query, opts, :order_by, functions, defaults)
+  end
 
-      def maybe_paginate(query, opts, defaults \\\\ [paginate: false, page: 1, page_size: 20]) do
-        TokenOperator.maybe(query, opts, :paginate, &paginate/2, defaults)
-      end
+  def maybe_paginate(query, opts, defaults \\\\ [paginate: false, page: 1, page_size: 20]) do
+    TokenOperator.maybe(query, opts, :paginate, &paginate/2, defaults)
+  end
 
-      defp paginate(query, %{paginate: true, page: page, page_size: page_size}) do
-        Repo.paginate(query, page: page, page_size: page_size)
-      end
+  defp paginate(query, %{paginate: true, page: page, page_size: page_size}) do
+    Repo.paginate(query, page: page, page_size: page_size)
+  end
 
-      defp paginate(query, _) do
-        Repo.all(query)
-      end
-    end
+  defp paginate(query, _) do
+    Repo.all(query)
+  end
+end
+```
 
 Now our `list_posts` function becomes even simpler.
 
-    import MyApp.Utilities.MaybeQueries
+```elixir
+import MyApp.Utilities.MaybeQueries
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> maybe_include(opts, author: &join_author/2)
-      |> maybe_filter(opts, published: &published/2, featured: &featured/2)
-      |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
-      |> maybe_paginate(opts)
-    end
+def list_posts(opts \\\\ []) do
+  Post
+  |> maybe_include(opts, author: &join_author/2)
+  |> maybe_filter(opts, published: &published/2, featured: &featured/2)
+  |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
+  |> maybe_paginate(opts)
+end
+```
 
 We'll still need to provide the filter, include, and order option functions
 in our context, but our wrapper function now automatically provides the behavior
@@ -273,64 +298,76 @@ This functionality could be used to support any sort of query option. For exampl
 perhaps we want to be able to grab all posts by a given author. We could expose
 an `:author` option.
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> TokenOperator.maybe(opts, :author, &by_author/2)
-      |> maybe_include(opts, author: &join_author/2)
-      |> maybe_filter(opts, published: &published/2, featured: &featured/2)
-      |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
-      |> maybe_paginate(opts)
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Post
+  |> TokenOperator.maybe(opts, :author, &by_author/2)
+  |> maybe_include(opts, author: &join_author/2)
+  |> maybe_filter(opts, published: &published/2, featured: &featured/2)
+  |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
+  |> maybe_paginate(opts)
+end
 
-    defp by_author(query, %{author: author}) do
-      from(p in query, where: p.author_id == ^author.id)
-    end
+defp by_author(query, %{author: author}) do
+  from(p in query, where: p.author_id == ^author.id)
+end
+```
 
 Now we can get the posts for the author with the following API:
 
-    author = Accounts.get_user!(author_id)
-    Posts.list_posts(author: author)
+```elixir
+author = Accounts.get_user!(author_id)
+Posts.list_posts(author: author)
+```
 
 But did we gain much out of this? Sure, we still only have a single `list_posts`
 function. The goal was not necessarily for less functions, but for the API to
 be clean and clear. It is also arguably less clear than simply adding a dedicated
 function for a collection of posts by author.
 
-    author = Accounts.get_user!(author_id)
-    Posts.list_posts_by(author)
+```elixir
+author = Accounts.get_user!(author_id)
+Posts.list_posts_by(author)
+```
 
 Our context function can also cleanly communicate and lock down the required
 struct type in our function's arguments.
 
-    def list_posts_by(%User{} = author) do
-      from(p in query, where: p.author_id == ^author.id)
-    end
+```elixir
+def list_posts_by(%User{} = author) do
+  from(p in query, where: p.author_id == ^author.id)
+end
+```
 
 Since we previously wrapped up our optional query functions, this is a good
 opportunity to reuse them in an additional function. Let's create a function
 that can be shared. We'll leave `maybe_paginate` off since it is a terminating
 function, which makes it slightly less flexible.
 
-    defp maybe_queries(query, opts \\\\ []) do
-      query
-      |> maybe_include(opts, author: &join_author/2)
-      |> maybe_filter(opts, published: &published/2, featured: &featured/2)
-      |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
-    end
+```elixir
+defp maybe_queries(query, opts \\\\ []) do
+  query
+  |> maybe_include(opts, author: &join_author/2)
+  |> maybe_filter(opts, published: &published/2, featured: &featured/2)
+  |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
+end
+```
 
 We can use this shared function in both our collection functions.
 
-    def list_posts(opts \\\\ []) do
-      Post
-      |> maybe_queries(opts)
-      |> maybe_paginate(opts)
-    end
+```elixir
+def list_posts(opts \\\\ []) do
+  Post
+  |> maybe_queries(opts)
+  |> maybe_paginate(opts)
+end
 
-    def list_posts_by(%User{} = author, opts \\\\ []) do
-      from(p in Post, where: p.author_id == ^author.id)
-      |> maybe_queries(opts)
-      |> maybe_paginate(opts)
-    end
+def list_posts_by(%User{} = author, opts \\\\ []) do
+  from(p in Post, where: p.author_id == ^author.id)
+  |> maybe_queries(opts)
+  |> maybe_paginate(opts)
+end
+```
 
 ## Single Resource Reuse
 
@@ -340,15 +377,19 @@ filter examples are both relevant to single resources. The ordering options
 are not relevant, but they don't hurt anything. Thus, we can use our same
 shared `maybe_query/2` function here.
 
-    def get_post!(opts \\\\ []) do
-      Post
-      |> maybe_queries(opts)
-      |> Repo.get!()
-    end
+```elixir
+def get_post!(opts \\\\ []) do
+  Post
+  |> maybe_queries(opts)
+  |> Repo.get!()
+end
+```
 
 Now we have all the same keyword options available.
 
-    Posts.get_post!(post_id, include: :author, filter: [:published, :featured])
+```elixir
+Posts.get_post!(post_id, include: :author, filter: [:published, :featured])
+```
 
 That post will only be returned if it is both published and featured. If returned,
 it will include the author association.
