@@ -158,7 +158,7 @@ defp maybe_paginate(query, _opts) do
 end
 ```
 
-Rather than providing a keyword list of functions, there is only a single `paginate/2`
+Rather than providing a keyword list of functions, there is only a single `maybe_paginate/2`
 function. This provides the following ways to call the function:
 
 - `Posts.list_posts(paginate: true)` - Paginated, defaulted to page 1 and a
@@ -320,17 +320,17 @@ author = Accounts.get_user!(author_id)
 Posts.list_posts(author: author)
 ```
 
-But did we gain much out of this? Sure, we still only have a single `list_posts`
-function. The goal was not necessarily for less functions, but for the API to
-be clean and clear. It is also arguably less clear than simply adding a dedicated
-function for a collection of posts by author.
+But did we gain much out of this? Maybe it's nice that we only have a single `list_posts`
+function. But the goal was not necessarily for less functions. It was for the API
+to be clean and clear. This is arguably less clear than simply adding a dedicated
+function for a collection of posts by author like the following:
 
 ```elixir
 author = Accounts.get_user!(author_id)
 Posts.list_posts_by(author)
 ```
 
-Our context function can also cleanly communicate and lock down the required
+Our context function can then cleanly communicate and lock down the required
 struct type in our function's arguments.
 
 ```elixir
