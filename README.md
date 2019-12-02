@@ -63,7 +63,7 @@ end
 ```
 
 Piping the query through the `TokenOperator.maybe/5` function sets us up with
-the desired API. The following is now supported:
+the desired API. `maybe/5` is the only function provided by `TokenOperator`. The following is now supported:
 
 - `Post.list_posts()` - All posts
 - `Post.list_posts(filter: [])` - All posts (clears defaults had we set any)
