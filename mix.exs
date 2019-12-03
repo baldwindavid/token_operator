@@ -4,7 +4,7 @@ defmodule TokenOperator.MixProject do
   def project do
     [
       app: :token_operator,
-      version: "0.1.0",
+      version: "0.1.1",
       description: "Simple library to make consistent keyword list-based APIs",
       elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,

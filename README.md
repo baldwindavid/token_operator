@@ -1,9 +1,7 @@
 # TokenOperator
 
-TokenOperator takes a _token_ and passes it to specified functions conditioned
-upon the presence of known keyword options. It aims to make developing a consistent
-keyword list-based function API simple. It provides for a simple pattern wrapped up in
-about 20 lines of code.
+Dependency-free helper most commonly used for making clean keyword APIs to
+Phoenix context functions.
 
 ## Installation
 
@@ -12,14 +10,51 @@ Add the latest release to your `mix.exs` file:
 ```elixir
 defp deps do
   [
-    {:token_operator, "~> 0.1.0"}
+    {:token_operator, "~> 0.1.1"}
   ]
 end
 ```
 
 Then run `mix deps.get` in your shell to fetch the dependencies.
 
-## Example: Filtering Via Multiple Functions
+## Why This Exists?
+
+One thing I've struggled with dealing with Phoenix contexts is knowing how to specify
+the queries to make from the controller. For example, say we want to see a list
+of blog posts. Sometimes we want that list paginated, sometimes only published,
+sometimes authors, sometimes with content, sometimes ordered by published date, etc.
+
+We can always just create a bunch of functions on the context for every single
+variation. Here is an extremely contrived example for illustration:
+
+```elixir
+Posts.list_published_posts_with_author_ordered_by_published_date_paginated(page: 7)
+```
+
+It would be nice to have a simple way to have an API with preset defaults similar
+to the following:
+
+```elixir
+Posts.list_posts(
+  filter: [:featured, :published],
+  include: :author,
+  paginate: true,
+  page: 7,
+  order_by: :publish_date
+)
+```
+
+`TokenOperator` makes it easy to develop a keyword-based API such as this, using
+the keywords that make sense for your application. The most obvious use case relates
+to operating on an Ecto query, but it can operate on any _token_ and has no
+dependencies.
+
+## A Walkthrough
+
+Common scenarios for filtering, including, ordering, and pagination are discussed
+below. The examples build upon one another and should be read in order.
+
+### Example: Filtering Via Multiple Functions
 
 A common use case is for devising a keyword list-based API for a Phoenix context.
 
@@ -110,7 +145,7 @@ should be called when a corresponding key is present in `opts`. These functions
 must accept two arguments: the _token_ and the _opts_.
 - default options - Optional default `opts`.
 
-## Example: Including
+### Example: Including
 
 This same pattern can be used to conditionally _include_ associated resources.
 For example, suppose we sometimes want to include an author with our post and
@@ -137,7 +172,7 @@ nested associations, etc. Those implementation details can be cleanly and
 consistently handled in simple functions within the context.
 
 
-## Example: Pagination Via Single Function
+### Example: Pagination Via Single Function
 
 In the filtering example above, we used a list of functions (`published/2`, `featured/2`).
 In some cases, we don't want to call functions based upon a list, but instead
@@ -192,7 +227,7 @@ pattern matching in our functions. The first function head matches opts in which
 to handle the actual pagination. There are a lot of libraries for that sort of
 thing.
 
-## Multiple or Single Functions?
+### Multiple or Single Functions?
 
 In the examples above, it seemed clear that the `:filter` and `:include` behaviors
 were best served by selecting from a list of functions, while `:paginate` worked
@@ -251,7 +286,7 @@ end
 This is more work, but more explicit and less dependent upon Ecto. Which method
 is best is going to depend upon our use case.
 
-## Making It Our Own
+### Making It Our Own
 
 `maybe/5` can continue to be chained directly within contexts. However, it is likely that
 the language of our API will start to become clear. If we are always using
@@ -306,7 +341,7 @@ We'll still need to provide the filter, include, and order option functions
 in our context, but our wrapper function now automatically provides the behavior
 for pagination.
 
-## Taking It Too Far
+### Taking It Too Far
 
 This functionality could be used to support any sort of query option. For example,
 perhaps we want to be able to grab all posts by a given author. We could expose
@@ -383,7 +418,7 @@ def list_posts_by(%User{} = author, opts \\ []) do
 end
 ```
 
-## Single Resource Reuse
+### Single Resource Reuse
 
 The examples thus far have focused on providing keyword list options for querying
 collections, but this works just fine for single resources. The include and
