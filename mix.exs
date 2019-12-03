@@ -8,7 +8,8 @@ defmodule TokenOperator.MixProject do
       description: "Simple library to make consistent keyword list-based APIs",
       elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package()
     ]
   end
 
@@ -16,6 +17,15 @@ defmodule TokenOperator.MixProject do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  def package do
+    [
+      maintainers: ["David Baldwin"],
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => "https://github.com/baldwindavid/token_operator"},
+      files: ~w(mix.exs README.md lib)
     ]
   end
 
