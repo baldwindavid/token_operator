@@ -5,6 +5,20 @@ upon the presence of known keyword options. It aims to make developing a consist
 keyword list-based API simple. It provides for a simple pattern wrapped up in
 about 20 lines of code.
 
+## Installation
+
+Add the latest release to your `mix.exs` file:
+
+```elixir
+defp deps do
+  [
+    {:token_operator, "~> 0.1.0"}
+  ]
+end
+```
+
+Then run `mix deps.get` in your shell to fetch the dependencies.
+
 ## Example: Filtering Via Multiple Functions
 
 A common use case is for devising a keyword list-based API for a Phoenix context.
