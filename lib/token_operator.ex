@@ -3,7 +3,7 @@ defmodule TokenOperator do
   @moduledoc """
   TokenOperator takes a _token_ and passes it to specified functions conditioned
   upon the presence of known keyword options. It aims to make developing a consistent
-  keyword list-based API simple. It provides for a simple pattern wrapped up in
+  keyword list-based function API simple. It provides for a simple pattern wrapped up in
   about 20 lines of code.
 
   ## Example: Filtering Via Multiple Functions
