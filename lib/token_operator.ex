@@ -1,5 +1,4 @@
 defmodule TokenOperator do
-
   @moduledoc """
   Dependency-free helper most commonly used for making clean keyword APIs to
   Phoenix context functions.
@@ -11,7 +10,7 @@ defmodule TokenOperator do
   ```elixir
   defp deps do
     [
-      {:token_operator, "~> 0.1.1"}
+      {:token_operator, "~> 0.2.0"}
     ]
   end
   ```
@@ -47,8 +46,8 @@ defmodule TokenOperator do
 
   `TokenOperator` makes it easy to develop a keyword-based API such as this, using
   the keywords that make sense for your application. The most obvious use case relates
-  to operating on an Ecto query, but it can operate on any _token_ and has no
-  dependencies.
+  to operating on an Ecto query, but it can operate on any _token_ (e.g. `Ecto.Multi`)
+  and has no dependencies.
 
   ## A Walkthrough
 
@@ -99,15 +98,15 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
+    |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
     |> Repo.all()
   end
 
-  defp published(query, _opts) do
+  defp published(query) do
     from(p in query, where: p.is_published)
   end
 
-  defp featured(query, _opts) do
+  defp featured(query) do
     from(p in query, where: p.is_featured)
   end
   ```
@@ -128,7 +127,7 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2], filter: :published)
+    |> TokenOperator.maybe(opts, :filter, [published: &published/1, featured: &featured/1], filter: :published)
     |> Repo.all()
   end
   ```
@@ -143,7 +142,10 @@ defmodule TokenOperator do
   In the example above, that is `:filter`. The name is completely up to us.
   - option functions - A keyword list of functions or a single function that
   should be called when a corresponding key is present in `opts`. These functions
-  must accept two arguments: the _token_ and the _opts_.
+  must accept two arguments: the _token_ and the _opts_. The function/s may be
+  either inline or referenced via function notation. These are often functions that
+  will already be present in the context. This package simply provides the ability to
+  conditionally call the functions based upon the presence of keyword options.
   - default options - Optional default `opts`.
 
   ### Example: Including
@@ -157,12 +159,12 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-    |> TokenOperator.maybe(opts, :filter, [published: &published/2, featured: &featured/2])
+    |> TokenOperator.maybe(opts, :include, author: &join_author/1)
+    |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
     |> Repo.all()
   end
 
-  defp join_author(query, _opts) do
+  defp join_author(query) do
     from(p in query, left_join: a in assoc(p, :author), preload: [author: a])
   end
   ```
@@ -175,7 +177,7 @@ defmodule TokenOperator do
 
   ### Example: Pagination Via Single Function
 
-  In the filtering example above, we used a list of functions (`published/2`, `featured/2`).
+  In the filtering example above, we used a list of functions (`published/1`, `featured/1`).
   In some cases, we don't want to call functions based upon a list, but instead
   want to pass the value of a keyword directly to a single function.
 
@@ -192,8 +194,8 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts // []) do
     Post
-    |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-    |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
+    |> TokenOperator.maybe(opts, :include, author: &join_author/1)
+    |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
     |> TokenOperator.maybe(opts, :paginate, &maybe_paginate/2, page: 1, page_size: 20)
   end
 
@@ -239,8 +241,8 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-    |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
+    |> TokenOperator.maybe(opts, :include, author: &join_author/1)
+    |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
     |> TokenOperator.maybe(opts, :order_by, &maybe_order/2, order_by: [desc: :published_on])
     |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
   end
@@ -254,8 +256,9 @@ defmodule TokenOperator do
   `:order_by` option supports. All of the following would work out-of-the-box:
 
   ```elixir
-  Post.list_posts(order_by: [asc: :title])
-  Post.list_posts(order_by: [desc: :published_on])
+  Post.list_posts() # uses default
+  Post.list_posts(order_by: :title)
+  Post.list_posts(order_by: [desc: :title])
   Post.list_posts(order_by: [desc: :published_on, asc: :title])
   ```
 
@@ -269,17 +272,17 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> TokenOperator.maybe(opts, :include, author: &join_author/2)
-    |> TokenOperator.maybe(opts, :filter, published: &published/2, featured: &featured/2)
-    |> TokenOperator.maybe(opts, :order_by, [publish_date: &order_by_publish_date/2, title: &order_by_title/2], order_by: :publish_date)
+    |> TokenOperator.maybe(opts, :include, author: &join_author/1)
+    |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
+    |> TokenOperator.maybe(opts, :order_by, [publish_date: &order_by_publish_date/1, title: &order_by_title/1], order_by: :publish_date)
     |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
   end
 
-  defp order_by_publish_date(query, _opts) do
+  defp order_by_publish_date(query) do
     from query, order_by: [desc: :published_on]
   end
 
-  defp order_by_title(query, _opts) do
+  defp order_by_title(query) do
     from query, order_by: :title
   end
   ```
@@ -331,9 +334,9 @@ defmodule TokenOperator do
 
   def list_posts(opts \\\\ []) do
     Post
-    |> maybe_include(opts, author: &join_author/2)
-    |> maybe_filter(opts, published: &published/2, featured: &featured/2)
-    |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
+    |> maybe_include(opts, author: &join_author/1)
+    |> maybe_filter(opts, published: &published/1, featured: &featured/1)
+    |> maybe_order_by(opts, publish_date: &order_by_publish_date/1, title: &order_by_title/1, order_by: :publish_date)
     |> maybe_paginate(opts)
   end
   ```
@@ -351,10 +354,10 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> TokenOperator.maybe(opts, :author, &by_author/2)
-    |> maybe_include(opts, author: &join_author/2)
-    |> maybe_filter(opts, published: &published/2, featured: &featured/2)
-    |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
+    |> TokenOperator.maybe(opts, :author, &by_author/1)
+    |> maybe_include(opts, author: &join_author/1)
+    |> maybe_filter(opts, published: &published/1, featured: &featured/1)
+    |> maybe_order_by(opts, publish_date: &order_by_publish_date/1, title: &order_by_title/1, order_by: :publish_date)
     |> maybe_paginate(opts)
   end
 
@@ -384,22 +387,22 @@ defmodule TokenOperator do
   struct type in our function's arguments.
 
   ```elixir
-  def list_posts_by(%User{} = author) do
-    from(p in query, where: p.author_id == ^author.id)
+  def list_posts_by(%User{} = user) do
+    from(p in query, where: p.author_id == ^user.id)
   end
   ```
 
   Since we previously wrapped up our optional query functions, this is a good
   opportunity to reuse them in an additional function. Let's create a function
-  that can be shared. We'll leave `maybe_paginate` off since it is a terminating
-  function, which makes it slightly less flexible.
+  in our context that can be used by multiple collection functions.
 
   ```elixir
-  defp maybe_queries(query, opts \\\\ []) do
+  defp maybe_query_for_collections(query, opts \\\\ []) do
     query
-    |> maybe_include(opts, author: &join_author/2)
-    |> maybe_filter(opts, published: &published/2, featured: &featured/2)
-    |> maybe_order_by(opts, publish_date: &order_by_publish_date/2, title: &order_by_title/2, order_by: :publish_date)
+    |> maybe_include(opts, author: &join_author/1)
+    |> maybe_filter(opts, published: &published/1, featured: &featured/1)
+    |> maybe_order_by(opts, publish_date: &order_by_publish_date/1, title: &order_by_title/1, order_by: :publish_date)
+    |> maybe_paginate(opts)
   end
   ```
 
@@ -408,29 +411,40 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> maybe_queries(opts)
-    |> maybe_paginate(opts)
+    |> maybe_query_for_collections(opts)
   end
 
   def list_posts_by(%User{} = author, opts \\\\ []) do
     from(p in Post, where: p.author_id == ^author.id)
-    |> maybe_queries(opts)
-    |> maybe_paginate(opts)
+    |> maybe_query_for_collections(opts)
   end
   ```
 
-  ### Single Resource Reuse
+  ### Single Record Functions
 
   The examples thus far have focused on providing keyword list options for querying
-  collections, but this works just fine for single resources. The include and
-  filter examples are both relevant to single resources. The ordering options
-  are not relevant, but they don't hurt anything. Thus, we can use our same
-  shared `maybe_query/2` function here.
+  collections, but this works just fine for single records. The include and
+  filter examples are both relevant to single record functions.
+
+  Let's create a function in our context that can be shared with multiple single
+  record functions.
+
+
+  ```elixir
+  defp maybe_query_for_record(query, opts \\\\ []) do
+    query
+    |> maybe_include(opts, author: &join_author/1)
+    |> maybe_filter(opts, published: &published/1, featured: &featured/1)
+  end
+  ```
+
+  It can be used in the `get_post!` function and any other single record functions
+  in the context.
 
   ```elixir
   def get_post!(opts \\\\ []) do
     Post
-    |> maybe_queries(opts)
+    |> maybe_query_for_record(opts)
     |> Repo.get!()
   end
   ```
@@ -464,7 +478,7 @@ defmodule TokenOperator do
   end
 
   defp process(token, _, opts, function) do
-    function.(token, opts)
+    run_function(function, token, opts)
   end
 
   defp process_list(token, option_value, opts, functions) when is_atom(option_value) do
@@ -474,7 +488,16 @@ defmodule TokenOperator do
   defp process_list(token, option_values, opts, functions) do
     Enum.reduce(option_values, token, fn value, token ->
       function = Keyword.fetch!(functions, value)
-      function.(token, opts)
+
+      run_function(function, token, opts)
     end)
+  end
+
+  defp run_function(function, token, opts) do
+    case :erlang.fun_info(function)[:arity] do
+      2 -> function.(token, opts)
+      1 -> function.(token)
+      _ -> raise "Function must have an arity of either 1 or 2"
+    end
   end
 end

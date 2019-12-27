@@ -7,7 +7,7 @@ defmodule TokenOperatorTest do
     test "does not call the corresponding option's function when the specified option is not present" do
       token = %{limit: nil}
       opts = []
-      function = fn token, _opts -> raise "should not be run" end
+      function = fn _token -> raise "should not be run" end
       assert %{limit: nil} == Operator.maybe(token, opts, :limit, function)
     end
 
@@ -21,6 +21,18 @@ defmodule TokenOperatorTest do
 
       assert %{limit: 20} ==
                Operator.maybe(token, opts, :limit, function)
+    end
+
+    test "supports functions with an arity of 1" do
+      token = %{limit: nil}
+      opts = [unlimited: true]
+
+      function = fn token ->
+        %{token | limit: 20}
+      end
+
+      assert %{limit: 20} ==
+               Operator.maybe(token, opts, :unlimited, function)
     end
 
     test "default options are passed to the corresponding option's function" do
@@ -73,6 +85,28 @@ defmodule TokenOperatorTest do
       assert %{paginate: true, page: 7, page_size: 20} ==
                Operator.maybe(token, opts, :paginate, function)
     end
+
+    test "raises an error when passed a function with arity of 0" do
+      token = %{limit: nil}
+      opts = [limit: 10]
+
+      function = fn -> nil end
+
+      assert_raise RuntimeError, "Function must have an arity of either 1 or 2", fn ->
+        Operator.maybe(token, opts, :limit, function)
+      end
+    end
+
+    test "raises an error when passed a function with arity of 3" do
+      token = %{limit: nil}
+      opts = [limit: 10]
+
+      function = fn token, options, extra_arg -> nil end
+
+      assert_raise RuntimeError, "Function must have an arity of either 1 or 2", fn ->
+        Operator.maybe(token, opts, :limit, function)
+      end
+    end
   end
 
   describe "maybe/5 with multiple functions" do
@@ -80,11 +114,11 @@ defmodule TokenOperatorTest do
       token = %{featured: nil, published: nil}
       opts = [filter: :featured]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -96,11 +130,11 @@ defmodule TokenOperatorTest do
       token = %{featured: nil, published: nil}
       opts = [filter: [:featured, :published]]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -113,11 +147,11 @@ defmodule TokenOperatorTest do
       opts = []
       default_opts = [filter: :published]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -136,11 +170,11 @@ defmodule TokenOperatorTest do
       opts = []
       default_opts = [filter: [:published, :featured]]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -159,11 +193,11 @@ defmodule TokenOperatorTest do
       opts = [filter: :published]
       default_opts = [filter: [:published, :featured]]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -182,11 +216,11 @@ defmodule TokenOperatorTest do
       opts = [filter: []]
       default_opts = [filter: [:published, :featured]]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -205,11 +239,11 @@ defmodule TokenOperatorTest do
       opts = [filter: nil]
       default_opts = [filter: [:published, :featured]]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -227,11 +261,11 @@ defmodule TokenOperatorTest do
       token = %{featured: nil, published: nil}
       opts = [filter: :nifty]
 
-      featured_fn = fn token, _opts ->
+      featured_fn = fn token ->
         %{token | featured: true}
       end
 
-      published_fn = fn token, _opts ->
+      published_fn = fn token ->
         %{token | published: true}
       end
 
@@ -240,7 +274,7 @@ defmodule TokenOperatorTest do
       end
     end
 
-    test "makes all options available to each function" do
+    test "supports functions with an arity of 2" do
       token = %{featured: nil, published: nil}
       opts = [filter: [:featured, :published], starts_with: "a"]
 
@@ -255,6 +289,5 @@ defmodule TokenOperatorTest do
       assert %{featured: "a", published: "a"} ==
                Operator.maybe(token, opts, :filter, featured: featured_fn, published: published_fn)
     end
-
   end
 end
