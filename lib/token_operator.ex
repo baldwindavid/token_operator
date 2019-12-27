@@ -10,7 +10,7 @@ defmodule TokenOperator do
   ```elixir
   defp deps do
     [
-      {:token_operator, "~> 0.2.0"}
+      {:token_operator, "~> 0.2.1"}
     ]
   end
   ```
@@ -243,7 +243,7 @@ defmodule TokenOperator do
     Post
     |> TokenOperator.maybe(opts, :include, author: &join_author/1)
     |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
-    |> TokenOperator.maybe(opts, :order_by, &maybe_order/2, order_by: [desc: :published_on])
+    |> TokenOperator.maybe(opts, :order_by, &maybe_order_by/2, order_by: [desc: :published_on])
     |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
   end
 
