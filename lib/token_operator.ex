@@ -10,7 +10,7 @@ defmodule TokenOperator do
   ```elixir
   defp deps do
     [
-      {:token_operator, "~> 0.3.0"}
+      {:token_operator, "~> 0.3.1"}
     ]
   end
   ```
@@ -133,10 +133,23 @@ defmodule TokenOperator do
   ```elixir
   def list_posts(opts \\\\ []) do
     Post
-    |> TokenOperator.maybe(opts, :filter, [published: &published/1, featured: &featured/1], filter: :published)
+    |> TokenOperator.maybe(opts, :filter, [published: &published/1, featured: &featured/1], defaults: [filter: :published])
     |> Repo.all()
   end
   ```
+
+  We could also make the presence of this option required:
+
+  ```elixir
+  def list_posts(opts \\\\ []) do
+    Post
+    |> TokenOperator.maybe(opts, :filter, [published: &published/1, featured: &featured/1], required: true)
+    |> Repo.all()
+  end
+  ```
+
+  An error will now be raised if the `:filter` option is not present and there
+  is no default set.
 
   The `maybe/5` function takes the following arguments:
 
@@ -209,7 +222,7 @@ defmodule TokenOperator do
     Post
     |> TokenOperator.maybe(opts, :include, author: &join_author/1)
     |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
-    |> TokenOperator.maybe(opts, :paginate, &maybe_paginate/2, page: 1, page_size: 20)
+    |> TokenOperator.maybe(opts, :paginate, &maybe_paginate/2, defaults: [page: 1, page_size: 20])
   end
 
   defp maybe_paginate(query, %{paginate: true, page: page, page_size: page_size}) do
@@ -245,6 +258,12 @@ defmodule TokenOperator do
   our app to handle the actual pagination. There are a lot of libraries for that
   sort of thing.
 
+  One should always consider what will be the most clear and maintainable API.
+  Pagination is a great example for demonstrating features of the package, but
+  it could be argued that context functions returning wholly different result
+  types (post vs. paginated posts) would be better served by dedicated functions
+  like `list_posts` and `list_posts_paginated`.
+
   ### Multiple or Single Functions?
 
   In the examples above, it seemed clear that the `:filter` and `:include`
@@ -258,8 +277,8 @@ defmodule TokenOperator do
     Post
     |> TokenOperator.maybe(opts, :include, author: &join_author/1)
     |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
-    |> TokenOperator.maybe(opts, :order_by, &maybe_order_by/2, order_by: [desc: :published_on])
-    |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
+    |> TokenOperator.maybe(opts, :order_by, &maybe_order_by/2, defaults: [order_by: [desc: :published_on]])
+    |> TokenOperator.maybe(opts, :paginate, &paginate/2, defaults: [paginate: false, page: 1, page_size: 20])
   end
 
   defp maybe_order_by(query, %{order_by: order_by}) do
@@ -291,8 +310,8 @@ defmodule TokenOperator do
     Post
     |> TokenOperator.maybe(opts, :include, author: &join_author/1)
     |> TokenOperator.maybe(opts, :filter, published: &published/1, featured: &featured/1)
-    |> TokenOperator.maybe(opts, :order_by, [publish_date: &order_by_publish_date/1, title: &order_by_title/1], order_by: :publish_date)
-    |> TokenOperator.maybe(opts, :paginate, &paginate/2, paginate: false, page: 1, page_size: 20)
+    |> TokenOperator.maybe(opts, :order_by, [publish_date: &order_by_publish_date/1, title: &order_by_title/1], defaults: [order_by: :publish_date])
+    |> TokenOperator.maybe(opts, :paginate, &paginate/2, defaults: [paginate: false, page: 1, page_size: 20])
   end
 
   defp order_by_publish_date(query) do
@@ -319,20 +338,20 @@ defmodule TokenOperator do
   defmodule MyApp.Utilities.MaybeQueries do
     alias MyApp.Repo
 
-    def maybe_filter(query, opts, functions, defaults \\\\ []) do
-      TokenOperator.maybe(query, opts, :filter, functions, defaults)
+    def maybe_filter(query, opts, functions, config \\\\ []) do
+      TokenOperator.maybe(query, opts, :filter, functions, config)
     end
 
-    def maybe_include(query, opts, functions, defaults \\\\ []) do
-      TokenOperator.maybe(query, opts, :include, functions, defaults)
+    def maybe_include(query, opts, functions, config \\\\ []) do
+      TokenOperator.maybe(query, opts, :include, functions, config)
     end
 
-    def maybe_order_by(query, opts, functions, defaults \\\\ []) do
-      TokenOperator.maybe(query, opts, :order_by, functions, defaults)
+    def maybe_order_by(query, opts, functions, config \\\\ []) do
+      TokenOperator.maybe(query, opts, :order_by, functions, config)
     end
 
-    def maybe_paginate(query, opts, defaults \\\\ [paginate: false, page: 1, page_size: 20]) do
-      TokenOperator.maybe(query, opts, :paginate, &paginate/2, defaults)
+    def maybe_paginate(query, opts, config \\\\ [defaults: [paginate: false, page: 1, page_size: 20]]) do
+      TokenOperator.maybe(query, opts, :paginate, &paginate/2, config)
     end
 
     defp paginate(query, %{paginate: true, page: page, page_size: page_size}) do
@@ -354,7 +373,7 @@ defmodule TokenOperator do
     Post
     |> maybe_include(opts, author: &join_author/1)
     |> maybe_filter(opts, published: &published/1, featured: &featured/1)
-    |> maybe_order_by(opts, publish_date: &order_by_publish_date/1, title: &order_by_title/1, order_by: :publish_date)
+    |> maybe_order_by(opts, [publish_date: &order_by_publish_date/1, title: &order_by_title/1], defaults: [order_by: :publish_date])
     |> maybe_paginate(opts)
   end
   ```
@@ -375,7 +394,7 @@ defmodule TokenOperator do
     |> TokenOperator.maybe(opts, :author, &by_author/1)
     |> maybe_include(opts, author: &join_author/1)
     |> maybe_filter(opts, published: &published/1, featured: &featured/1)
-    |> maybe_order_by(opts, publish_date: &order_by_publish_date/1, title: &order_by_title/1, order_by: :publish_date)
+    |> maybe_order_by(opts, publish_date: &order_by_publish_date/1, title: &order_by_title/1, defaults: [order_by: :publish_date])
     |> maybe_paginate(opts)
   end
 
@@ -411,6 +430,8 @@ defmodule TokenOperator do
   end
   ```
 
+  ### Reusing Our Functions
+
   Since we previously wrapped up our optional query functions, this is a good
   opportunity to reuse them in an additional function. Let's create a function
   in our context that can be used by multiple collection functions.
@@ -420,7 +441,7 @@ defmodule TokenOperator do
     query
     |> maybe_include(opts, author: &join_author/1)
     |> maybe_filter(opts, published: &published/1, featured: &featured/1)
-    |> maybe_order_by(opts, publish_date: &order_by_publish_date/1, title: &order_by_title/1, order_by: :publish_date)
+    |> maybe_order_by(opts, [publish_date: &order_by_publish_date/1, title: &order_by_title/1], defaults: [order_by: :publish_date])
     |> maybe_paginate(opts)
   end
   ```

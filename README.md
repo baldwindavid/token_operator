@@ -13,7 +13,7 @@ Add the latest release to your `mix.exs` file:
 ```elixir
 defp deps do
   [
-    {:token_operator, "~> 0.3.0"}
+    {:token_operator, "~> 0.3.1"}
   ]
 end
 ```
