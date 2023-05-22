@@ -38,40 +38,40 @@ defmodule TokenOperatorTest do
     test "default options are passed to the corresponding option's function" do
       token = %{limit: nil}
       opts = []
-      default_opts = [limit: 50]
+      defaults = [limit: 50]
 
       function = fn token, %{limit: limit} ->
         %{token | limit: limit}
       end
 
       assert %{limit: 50} ==
-               Operator.maybe(token, opts, :limit, function, default_opts)
+               Operator.maybe(token, opts, :limit, function, defaults: defaults)
     end
 
     test "default options may be overriden" do
       token = %{limit: nil}
       opts = [limit: 10]
-      default_opts = [limit: 50]
+      defaults = [limit: 50]
 
       function = fn token, %{limit: limit} ->
         %{token | limit: limit}
       end
 
       assert %{limit: 10} ==
-               Operator.maybe(token, opts, :limit, function, default_opts)
+               Operator.maybe(token, opts, :limit, function, defaults: defaults)
     end
 
     test "default options may be effectively cleared with nil" do
       token = %{limit: nil}
       opts = [limit: nil]
-      default_opts = [limit: 50]
+      defaults = [limit: 50]
 
       function = fn token, %{limit: limit} ->
         %{token | limit: limit}
       end
 
       assert %{limit: nil} ==
-               Operator.maybe(token, opts, :limit, function, default_opts)
+               Operator.maybe(token, opts, :limit, function, defaults: defaults)
     end
 
     test "makes all options available to the corresponding function" do
@@ -84,6 +84,44 @@ defmodule TokenOperatorTest do
 
       assert %{paginate: true, page: 7, page_size: 20} ==
                Operator.maybe(token, opts, :paginate, function)
+    end
+
+    test "does not require an option by default" do
+      token = %{limit: nil}
+      opts = []
+
+      function = fn token, %{limit: limit} ->
+        %{token | limit: limit}
+      end
+
+      assert %{limit: nil} ==
+               Operator.maybe(token, opts, :limit, function)
+    end
+
+    test "raises an error when a required option is not present and with no default" do
+      token = %{limit: nil}
+      opts = []
+
+      function = fn token, %{limit: limit} ->
+        %{token | limit: limit}
+      end
+
+      assert_raise RuntimeError, "The :limit option must be present or have a default", fn ->
+        Operator.maybe(token, opts, :limit, function, required: true)
+      end
+    end
+
+    test "does not raise an error when an option is not present but the default is set" do
+      token = %{limit: nil}
+      opts = []
+      defaults = [limit: 50]
+
+      function = fn token, %{limit: limit} ->
+        %{token | limit: limit}
+      end
+
+      assert %{limit: 50} ==
+               Operator.maybe(token, opts, :limit, function, defaults: defaults, required: true)
     end
 
     test "raises an error when passed a function with arity of 0" do
@@ -145,7 +183,7 @@ defmodule TokenOperatorTest do
     test "supports a single default for multiple option functions" do
       token = %{featured: nil, published: nil}
       opts = []
-      default_opts = [filter: :published]
+      defaults = [filter: :published]
 
       featured_fn = fn token ->
         %{token | featured: true}
@@ -161,14 +199,14 @@ defmodule TokenOperatorTest do
                  opts,
                  :filter,
                  [featured: featured_fn, published: published_fn],
-                 default_opts
+                 defaults: defaults
                )
     end
 
     test "supports multiple defaults for multiple option functions" do
       token = %{featured: nil, published: nil}
       opts = []
-      default_opts = [filter: [:published, :featured]]
+      defaults = [filter: [:published, :featured]]
 
       featured_fn = fn token ->
         %{token | featured: true}
@@ -184,14 +222,14 @@ defmodule TokenOperatorTest do
                  opts,
                  :filter,
                  [featured: featured_fn, published: published_fn],
-                 default_opts
+                 defaults: defaults
                )
     end
 
     test "default options may be overriden" do
       token = %{featured: nil, published: nil}
       opts = [filter: :published]
-      default_opts = [filter: [:published, :featured]]
+      defaults = [filter: [:published, :featured]]
 
       featured_fn = fn token ->
         %{token | featured: true}
@@ -207,14 +245,14 @@ defmodule TokenOperatorTest do
                  opts,
                  :filter,
                  [featured: featured_fn, published: published_fn],
-                 default_opts
+                 defaults: defaults
                )
     end
 
     test "default options may be cleared with an empty list" do
       token = %{featured: nil, published: nil}
       opts = [filter: []]
-      default_opts = [filter: [:published, :featured]]
+      defaults = [filter: [:published, :featured]]
 
       featured_fn = fn token ->
         %{token | featured: true}
@@ -230,14 +268,14 @@ defmodule TokenOperatorTest do
                  opts,
                  :filter,
                  [featured: featured_fn, published: published_fn],
-                 default_opts
+                 defaults: defaults
                )
     end
 
     test "default options may be cleared with nil" do
       token = %{featured: nil, published: nil}
       opts = [filter: nil]
-      default_opts = [filter: [:published, :featured]]
+      defaults = [filter: [:published, :featured]]
 
       featured_fn = fn token ->
         %{token | featured: true}
@@ -253,7 +291,7 @@ defmodule TokenOperatorTest do
                  opts,
                  :filter,
                  [featured: featured_fn, published: published_fn],
-                 default_opts
+                 defaults: defaults
                )
     end
 
