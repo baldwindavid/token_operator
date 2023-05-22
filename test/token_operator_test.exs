@@ -101,7 +101,7 @@ defmodule TokenOperatorTest do
       token = %{limit: nil}
       opts = [limit: 10]
 
-      function = fn token, options, extra_arg -> nil end
+      function = fn _token, _options, _extra_arg -> nil end
 
       assert_raise RuntimeError, "Function must have an arity of either 1 or 2", fn ->
         Operator.maybe(token, opts, :limit, function)
